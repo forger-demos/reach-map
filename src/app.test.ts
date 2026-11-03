@@ -15,3 +15,9 @@ test('refuses paths outside public', async () => {
   const res = await handle(new Request('http://x/../package.json'));
   expect(res.status).toBe(404);
 });
+
+test('serves the client bundle', async () => {
+  const res = await handle(new Request('http://x/app.js'));
+  expect(res.status).toBe(200);
+  expect((await res.text()).length).toBeGreaterThan(0);
+});

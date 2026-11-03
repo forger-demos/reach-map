@@ -8,3 +8,7 @@ coverage/
 .forger/events.jsonl
 .forger/declined.json
 .forger/verdicts/
+public/app.js
+public/maplibre-gl.css
+public/maplibre-gl-worker.mjs
+public/maplibre-gl-shared.mjs
