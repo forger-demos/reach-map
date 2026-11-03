@@ -26,7 +26,7 @@ Read left to right: the calendar chooses which trips survive, the stop times are
 - **Day types.** A weekday, a Saturday and a Sunday, each taken from a real date inside the feed's validity window. The page's time picker chooses a day type and a clock time. The manifest records the date, the feed version and the publisher.
 - **Late-night trips.** Times past 24:00 stay as they are in the service day they belong to. A query in the small hours reads the previous day type with a 24 hour shift.
 - **Stops.** Only boarding stops (location type empty or 0) are kept; parent stations are ignored for routing.
-- **Format.** Typed arrays in one binary file per day type plus a JSON manifest holding names, route labels and the metadata above. A fixed header, offsets and flat arrays decode in a tenth of a second and need no parser. `spike/timetable.ts` is the throwaway version of the layout.
+- **Format.** Typed arrays in one binary file per day type plus a JSON manifest holding names, route labels and the metadata above. A fixed header, offsets and flat arrays decode in a tenth of a second and need no parser. The layout is `src/core/timetable.ts`.
 - **Streaming reader.** `stop_times.txt` is read as a stream and filtered by trip as it passes, a few seconds for the whole feed.
 - **No shapes.** `shapes.txt` is skipped; the hover journey draws straight segments between stops.
 
@@ -43,5 +43,7 @@ Recommendation: commit a snapshot of the three day-type files and manifest under
 
 ## Commands
 
-- Build: `bun spike/build-feed.ts <gtfs-dir> <YYYYMMDD> <out.bin>` is the throwaway version. The build slice replaces it with a package script.
-- Measure: `bun spike/bench.ts <out.bin>`.
+- Build: `bun run data:build <feed.zip|feed-dir> --weekday YYYYMMDD --saturday YYYYMMDD --sunday YYYYMMDD` streams the feed (a zip is read in place with `unzip -p`) and writes one `timetable-<daytype>.bin` per day type plus `manifest.json` under `public/data/`. Each date must fall on its day type and inside the feed's validity window, or the command stops before writing.
+- Measure: `bun spike/bench.ts public/data/timetable-weekday.bin`.
+
+Code layout: pure logic (service-day selection, time parsing, route grouping, walk model, timetable codec, manifest) is in `src/core/`; the streaming reader and the command are in `src/shell/`. The walk constants live in `src/core/walk.ts`. Day files share one stop numbering with the manifest, and each route in a day file points at a manifest line (label and mode).

@@ -2,15 +2,22 @@ html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
 
 .app { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-#map { grid-area: 1 / 1 / 3 / 2; background: var(--map-bg); }
+#map { grid-area: 1 / 1; background: var(--map-bg); }
 
 .controls {
   position: relative; z-index: 2;
   grid-area: 2 / 1;
   min-height: 0;
-  padding: 0;
-  pointer-events: none;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  background: var(--chrome-bg); color: var(--chrome-fg);
+  border-top: 1px solid var(--chrome-border);
+  display: flex; flex-direction: column; gap: 4px;
 }
+.status, .credit { margin: 0; font-size: 13px; line-height: 1.4; }
+.status { color: var(--muted); }
+.status[data-state="failed"] { color: var(--chrome-fg); font-weight: 600; }
+.credit { color: var(--muted); }
+.credit a { color: var(--chrome-link); }
 
 .theme-toggle {
   position: absolute; z-index: 3; top: calc(12px + env(safe-area-inset-top)); left: 12px;
@@ -27,5 +34,10 @@ body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-s
 @media (min-width: 720px) {
   .app { grid-template-columns: 1fr 320px; grid-template-rows: 1fr; }
   #map { grid-area: 1 / 1; }
-  .controls { grid-area: 1 / 2; }
+  .controls {
+    grid-area: 1 / 2;
+    border-top: 0; border-left: 1px solid var(--chrome-border);
+    padding: 16px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .credit { margin-top: auto; }
 }

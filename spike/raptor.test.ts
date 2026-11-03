@@ -1,7 +1,6 @@
 import {expect, test} from 'bun:test';
 import {fixture, h} from './fixture';
 import {indexStops, raptor} from './raptor';
-import {buildTimetable, decode, encode, footpaths, groupRoutes, metres, routeCount, tripCount} from './timetable';
 
 const tt = fixture();
 const idx = indexStops(tt);
@@ -55,47 +54,4 @@ test('catches an earlier trip of a route boarded further along', () => {
   // Two sources on the same line: the one further along must not delay the earlier one.
   const r = raptor(tt, idx, [{stop: C, time: h(8, 25)}, {stop: D, time: h(8, 0)}], 5);
   expect(r.arrival[E]).toBe(h(8, 45));
-});
-
-test('route and trip counts', () => {
-  expect(routeCount(tt)).toBe(3);
-  expect(tripCount(tt, 0) + tripCount(tt, 1) + tripCount(tt, 2)).toBe(5);
-  expect(tripCount({...tt, routeStopOffset: new Int32Array([0, 0]), routeTimeOffset: new Int32Array([0, 0])}, 0)).toBe(0);
-});
-
-test('the binary form round-trips', () => {
-  const back = decode(encode(tt));
-  expect(back).toEqual(tt);
-  expect(Array.from(raptor(back, indexStops(back), [{stop: A, time: h(8, 0)}], 5).arrival)).toEqual(
-    Array.from(raptor(tt, idx, [{stop: A, time: h(8, 0)}], 5).arrival),
-  );
-});
-
-test('decoding a Node Buffer does not alias the whole file', () => {
-  const back = decode(Buffer.from(encode(tt)) as unknown as Uint8Array);
-  expect(back.routeStops).toEqual(tt.routeStops);
-  expect(back.arrivals).toEqual(tt.arrivals);
-});
-
-test('a foreign file is refused', () => {
-  expect(() => decode(new Uint8Array(16))).toThrow('not a reach-map timetable');
-});
-
-test('a trip that would overtake another starts a new route', () => {
-  const slow = {stops: [0, 1], arrivals: [0, 1000], departures: [0, 1000]};
-  const fast = {stops: [0, 1], arrivals: [10, 100], departures: [10, 100]};
-  const later = {stops: [0, 1], arrivals: [20, 2000], departures: [20, 2000]};
-  expect(groupRoutes([later, fast, slow]).map((r) => r.length).sort()).toEqual([1, 2]);
-  expect(buildTimetable([0, 0], [0, 0], [slow, fast], [[], []]).routeStopOffset.length).toBe(3);
-});
-
-test('straight-line transfers respect the radius and detour', () => {
-  const lat = [60.0, 60.0, 60.0];
-  const lon = [24.0, 24.001, 24.1];
-  const f = footpaths(lat, lon, 200, 1.3, 1.25);
-  const m = metres(60, 24, 60, 24.001);
-  expect(f[0]).toEqual([[1, Math.round((m * 1.3) / 1.25)]]);
-  expect(f[2]).toEqual([]);
-  expect(m).toBeGreaterThan(50);
-  expect(m).toBeLessThan(60);
 });

@@ -11,7 +11,10 @@
 <body>
 <div class="app">
   <div id="map" role="application" aria-label="Map of the Helsinki region"></div>
-  <aside id="controls" class="controls" aria-label="Controls"></aside>
+  <aside id="controls" class="controls" aria-label="Controls">
+    <p id="status" class="status" role="status">Loading the timetable...</p>
+    <footer id="credit" class="credit"></footer>
+  </aside>
   <button id="theme-toggle" class="theme-toggle" type="button">Dark</button>
 </div>
 <script type="module" src="app.js"></script>

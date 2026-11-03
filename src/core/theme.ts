@@ -16,3 +16,8 @@ export function resolveTheme(override: Theme | null, prefersDark: boolean): Them
 export function parseTheme(value: string | null): Theme | null {
   return value === 'light' || value === 'dark' ? value : null;
 }
+
+/** Colour of the stop dots and their outline, chosen to read on each base map. */
+export function stopPaint(theme: Theme): {fill: string; outline: string} {
+  return theme === 'dark' ? {fill: '#7cc4ff', outline: '#0c0e14'} : {fill: '#0a62b8', outline: '#ffffff'};
+}
