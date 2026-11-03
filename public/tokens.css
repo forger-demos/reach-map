@@ -3,6 +3,11 @@
   --fg: #e8ebf2;
   --muted: #8b93a7;
   --accent: #7cc4ff;
+  --map-bg: #0c0e14;
+  --chrome-bg: rgba(18, 21, 30, 0.92);
+  --chrome-fg: #e8ebf2;
+  --chrome-link: #9ed3ff;
+  --chrome-border: #2a3042;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -10,5 +15,32 @@
     --fg: #141821;
     --muted: #5a6275;
     --accent: #0a62b8;
+    --map-bg: #f2f0ea;
+    --chrome-bg: rgba(255, 255, 255, 0.94);
+    --chrome-fg: #141821;
+    --chrome-link: #0a4f96;
+    --chrome-border: #c9cfdd;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0d12;
+  --fg: #e8ebf2;
+  --muted: #8b93a7;
+  --accent: #7cc4ff;
+  --map-bg: #0c0e14;
+  --chrome-bg: rgba(18, 21, 30, 0.92);
+  --chrome-fg: #e8ebf2;
+  --chrome-link: #9ed3ff;
+  --chrome-border: #2a3042;
+}
+:root[data-theme="light"] {
+  --bg: #f7f8fb;
+  --fg: #141821;
+  --muted: #5a6275;
+  --accent: #0a62b8;
+  --map-bg: #f2f0ea;
+  --chrome-bg: rgba(255, 255, 255, 0.94);
+  --chrome-fg: #141821;
+  --chrome-link: #0a4f96;
+  --chrome-border: #c9cfdd;
 }

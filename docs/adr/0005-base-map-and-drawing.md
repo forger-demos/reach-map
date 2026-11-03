@@ -16,3 +16,4 @@ Use MapLibre GL JS with OpenFreeMap Positron and Dark styles. Paint the travel t
 - The public OpenFreeMap instance has no service promise; the fallback is documented.
 - The grid, the ramp and the contour maths are pure modules; only the canvas and map calls are shell code.
 - The client needs bundling, which the first map slice sets up.
+- `maplibre-gl` is an npm dependency bundled by `bun run build:client`. It loads its worker and shared chunk as separate files next to the bundle, so the build copies them into `public/` beside the bundle and stylesheet; none of these built files are committed.
