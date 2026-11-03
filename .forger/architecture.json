@@ -1,9 +1,11 @@
 {
   "layers": [
     {"name": "core", "paths": ["src/core/**"]},
-    {"name": "shell", "paths": ["src/shell/**"]}
+    {"name": "shell", "paths": ["src/shell/**"]},
+    {"name": "ui", "paths": ["src/ui/**"]}
   ],
   "allow": {
-    "shell": ["core"]
+    "shell": ["core"],
+    "ui": ["core"]
   }
 }
