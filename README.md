@@ -11,3 +11,11 @@ bun install
 bun run start
 bun run check
 ```
+
+## Docs
+
+- [docs/brief.md](docs/brief.md): the owner's brief.
+- [docs/research/](docs/research/): the research notes with sources.
+- [docs/adr/](docs/adr/): the decisions.
+- [docs/plan.md](docs/plan.md): the build as ordered slices.
+- `spike/` holds throwaway checks of the routing assumption; the build slices replace it.
