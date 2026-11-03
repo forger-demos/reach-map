@@ -1,4 +1,4 @@
-import {buildTimetable, type TripInput} from './timetable';
+import {buildTimetable, type TripInput} from '../src/core/timetable';
 
 export const h = (hh: number, mm: number) => hh * 3600 + mm * 60;
 
@@ -10,7 +10,7 @@ export const h = (hh: number, mm: number) => hh * 3600 + mm * 60;
  * and a five minute walk between E and F. G is served by nothing.
  */
 export function fixture() {
-  const trip = (stops: number[], times: number[]): TripInput => ({stops, arrivals: times, departures: times});
+  const trip = (stops: number[], times: number[]): TripInput => ({line: 0, stops, arrivals: times, departures: times});
   const trips = [
     trip([0, 1, 2], [h(8, 0), h(8, 10), h(8, 20)]),
     trip([0, 1, 2], [h(8, 30), h(8, 40), h(8, 50)]),

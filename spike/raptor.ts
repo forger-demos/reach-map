@@ -1,5 +1,5 @@
 // Throwaway spike: round-based earliest-arrival search (RAPTOR) over a Timetable.
-import {type Timetable, routeCount} from './timetable';
+import {type Timetable, routeCount} from './timetable-type';
 
 export interface Source {
   stop: number;

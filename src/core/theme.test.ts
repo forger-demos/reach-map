@@ -1,5 +1,5 @@
 import {expect, test} from 'bun:test';
-import {parseTheme, resolveTheme, styleFor} from './theme';
+import {parseTheme, resolveTheme, styleFor, stopPaint} from './theme';
 
 test.each([
   ['light', 'https://tiles.openfreemap.org/styles/positron'],
@@ -20,4 +20,8 @@ test('parseTheme accepts only known themes', () => {
   expect(parseTheme('light')).toBe('light');
   expect(parseTheme('sepia')).toBeNull();
   expect(parseTheme(null)).toBeNull();
+});
+
+test('stop dots differ between themes', () => {
+  expect(stopPaint('light')).not.toEqual(stopPaint('dark'));
 });

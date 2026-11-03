@@ -1,7 +1,8 @@
 // Throwaway spike CLI: bun spike/bench.ts <timetable.bin>
 import {readFileSync} from 'node:fs';
 import {indexStops, raptor} from './raptor';
-import {decode, metres} from './timetable';
+import {decode} from '../src/core/timetable';
+import {DETOUR_FACTOR, WALK_SPEED_MPS, metres} from '../src/core/walk';
 
 const t0 = performance.now();
 const tt = decode(readFileSync(process.argv[2] as string) as unknown as Uint8Array);
@@ -18,7 +19,7 @@ for (const [name, lat, lon] of spots) {
   const sources = [];
   for (let s = 0; s < tt.stopCount; s++) {
     const m = metres(lat, lon, tt.stopLat[s] as number, tt.stopLon[s] as number);
-    if (m < 600) sources.push({stop: s, time: 8 * 3600 + Math.round((m * 1.3) / 1.25)});
+    if (m < 600) sources.push({stop: s, time: 8 * 3600 + Math.round((m * DETOUR_FACTOR) / WALK_SPEED_MPS)});
   }
   const times: number[] = [];
   let within = [0, 0, 0, 0];
