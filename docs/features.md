@@ -31,7 +31,7 @@ The result is drawn as a smooth colour field over the region rather than as dots
 
 Colour is not the only carrier of the time meaning: the legend lists the four steps by name. The stop dots are hidden once a field is shown; a "Show stops" toggle in the panel brings them back, coloured by band. While a new field is computed the previous one stays and the status line says so. Clicking again moves the origin and repaints.
 
-Near the city centre and in a suburb:
+Near the city centre and in a suburb, with the outlines:
 
 | | Light | Dark |
 |---|---|---|
@@ -39,3 +39,7 @@ Near the city centre and in a suburb:
 | Desktop, centre | ![Desktop, centre, light](screenshots/reach-centre-desktop-light.png) | ![Desktop, centre, dark](screenshots/reach-centre-desktop-dark.png) |
 | Phone, suburb | ![Phone, suburb, light](screenshots/reach-suburb-phone-light.png) | ![Phone, suburb, dark](screenshots/reach-suburb-phone-dark.png) |
 | Desktop, suburb | ![Desktop, suburb, light](screenshots/reach-suburb-desktop-light.png) | ![Desktop, suburb, dark](screenshots/reach-suburb-desktop-dark.png) |
+
+## Outlines
+
+Over the field, a line marks where the travel time crosses 15, 30, 45 and 60 minutes, each labelled with its minutes along the line. `src/core/contour.ts` runs marching squares over the field grid: a vertex lies on the line between two neighbouring cell centres where the value crosses the threshold, interpolated linearly. A cell at or below the threshold is inside, an unreached cell is outside, and where a reached cell meets an unreached one the vertex sits halfway. A saddle is resolved by the mean of the four corners, so the same grid always gives the same lines. Lines that run into the edge of the grid stay open; a threshold that nothing crosses draws nothing. The lines are a GeoJSON layer drawn in a colour and halo chosen per theme.
