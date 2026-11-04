@@ -7,6 +7,7 @@ import {validateManifest} from '../core/manifest';
 import {stopsGeoJson, type StopFeatureCollection} from '../core/stops-geojson';
 import {bandColours, bandExpression, parseTheme, resolveTheme, stopPaint, styleFor, type Theme} from '../core/theme';
 import {decode, type Timetable} from '../core/timetable';
+import {ContourLayer} from './contour-layer';
 import {FieldLayer} from './field-layer';
 
 const STORAGE_KEY = 'reach-map-theme';
@@ -44,6 +45,7 @@ let latest = 0;
 
 const grid = makeGrid(REGION, CELL_METRES);
 const field = new FieldLayer(map, grid);
+const outlines = new ContourLayer(map, grid);
 const stopsToggle = document.getElementById('stops-toggle') as HTMLInputElement;
 const stopsRow = document.getElementById('stops-row') as HTMLElement;
 
@@ -105,6 +107,7 @@ function drawStops(): void {
 // A new base style drops our sources and layers, so draw them again once it has loaded.
 map.on('style.load', () => {
   field.render(theme);
+  outlines.render(theme);
   drawStops();
 });
 
@@ -187,17 +190,20 @@ map.on('click', (e) => {
       origin = null;
       stops = stopsGeoJson(tt);
       field.set(null);
+      outlines.set(null);
       status.textContent = 'No stop is within walking range of that point. Click closer to a stop.';
       status.dataset.state = 'empty';
     } else {
       origin = [lng, lat];
       stops = stopsGeoJson(tt, bandsOf(result.arrival, DEFAULT_DEPARTURE));
       field.set(values);
+      outlines.set(values);
       const n = reachableWithin(result.arrival, DEFAULT_DEPARTURE, 30);
       status.textContent = `${n} ${n === 1 ? 'stop' : 'stops'} within 30 minutes, leaving 08:00 on a weekday.`;
       status.dataset.state = 'reach';
     }
     field.render(theme);
+    outlines.render(theme);
     drawStops();
     showLegend();
   }, 0);

@@ -37,3 +37,8 @@ export function bandExpression(theme: Theme, plain: string): unknown[] {
   match.push(beyond);
   return ['case', ['has', 'band'], match, plain];
 }
+
+/** Colour of the outlines and their minute labels, and the halo that keeps them readable on the field and the base map. */
+export function contourPaint(theme: Theme): {line: string; halo: string} {
+  return theme === 'dark' ? {line: '#ffffff', halo: '#0c0e14'} : {line: '#1b1f2a', halo: '#ffffff'};
+}

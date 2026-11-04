@@ -1,5 +1,5 @@
 import {expect, test} from 'bun:test';
-import {bandColours, bandExpression, parseTheme, resolveTheme, styleFor, stopPaint} from './theme';
+import {bandColours, bandExpression, contourPaint, parseTheme, resolveTheme, styleFor, stopPaint} from './theme';
 
 test.each([
   ['light', 'https://tiles.openfreemap.org/styles/positron'],
@@ -36,4 +36,9 @@ test('the band expression colours banded stops and leaves unbanded ones plain', 
 test('every theme has one colour per band', () => {
   expect(bandColours('dark').bands.length).toBe(4);
   expect(bandColours('light').bands.length).toBe(4);
+});
+
+test('outline colour and halo differ in each theme so labels read on both base maps', () => {
+  for (const t of ['light', 'dark'] as const) expect(contourPaint(t).line).not.toBe(contourPaint(t).halo);
+  expect(contourPaint('light').line).not.toBe(contourPaint('dark').line);
 });
