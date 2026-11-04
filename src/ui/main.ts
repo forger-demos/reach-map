@@ -1,11 +1,13 @@
 import * as maplibregl from 'maplibre-gl';
 import {creditOf} from '../core/credit';
+import {CELL_METRES, computeField, makeGrid, reachedCells, REGION} from '../core/field';
 import {indexStops, raptor, type StopIndex} from '../core/raptor';
 import {BAND_MINUTES, DEFAULT_DEPARTURE, MAX_ROUNDS, bandsOf, reachableWithin, sourcesNear} from '../core/reach';
 import {validateManifest} from '../core/manifest';
 import {stopsGeoJson, type StopFeatureCollection} from '../core/stops-geojson';
 import {bandColours, bandExpression, parseTheme, resolveTheme, stopPaint, styleFor, type Theme} from '../core/theme';
 import {decode, type Timetable} from '../core/timetable';
+import {FieldLayer} from './field-layer';
 
 const STORAGE_KEY = 'reach-map-theme';
 const HELSINKI_BOUNDS: [[number, number], [number, number]] = [[24.55, 60.07], [25.3, 60.35]];
@@ -37,6 +39,19 @@ let stops: StopFeatureCollection | null = null;
 let timetable: Timetable | null = null;
 let index: StopIndex | null = null;
 let origin: [number, number] | null = null;
+let showStops = false;
+let latest = 0;
+
+const grid = makeGrid(REGION, CELL_METRES);
+const field = new FieldLayer(map, grid);
+const stopsToggle = document.getElementById('stops-toggle') as HTMLInputElement;
+const stopsRow = document.getElementById('stops-row') as HTMLElement;
+
+/** Dots give way to the colour field once there is one; the toggle brings them back. */
+function applyStopVisibility(): void {
+  stopsRow.hidden = !origin;
+  if (map.getLayer('stops')) map.setLayoutProperty('stops', 'visibility', !origin || showStops ? 'visible' : 'none');
+}
 
 const stopColour = () => (origin ? bandExpression(theme, stopPaint(theme).fill) : stopPaint(theme).fill);
 
@@ -69,6 +84,7 @@ function drawStops(): void {
     map.setPaintProperty('stops', 'circle-color', stopColour() as never);
     map.setPaintProperty('stops', 'circle-stroke-color', paint.outline);
     drawOrigin();
+    applyStopVisibility();
     return;
   }
   map.addSource('stops', {type: 'geojson', data: stops as never});
@@ -84,9 +100,13 @@ function drawStops(): void {
     },
   });
   drawOrigin();
+  applyStopVisibility();
 }
-// A new base style drops our source and layer, so draw them again once it has loaded.
-map.on('style.load', drawStops);
+// A new base style drops our sources and layers, so draw them again once it has loaded.
+map.on('style.load', () => {
+  field.render(theme);
+  drawStops();
+});
 
 const status = document.getElementById('status') as HTMLElement;
 const credit = document.getElementById('credit') as HTMLElement;
@@ -149,23 +169,43 @@ function showLegend(): void {
 
 map.on('click', (e) => {
   if (!timetable || !index) return;
+  const tt = timetable;
+  const idx = index;
   const {lng, lat} = e.lngLat;
-  const sources = sourcesNear(timetable, lat, lng, DEFAULT_DEPARTURE);
-  origin = [lng, lat];
-  if (sources.length === 0) {
-    stops = stopsGeoJson(timetable);
-    status.textContent = 'No stop is within walking range of that point. Click closer to a stop.';
-    status.dataset.state = 'empty';
-    origin = null;
-  } else {
-    const result = raptor(timetable, index, sources, MAX_ROUNDS);
-    stops = stopsGeoJson(timetable, bandsOf(result.arrival, DEFAULT_DEPARTURE));
-    const n = reachableWithin(result.arrival, DEFAULT_DEPARTURE, 30);
-    status.textContent = `${n} ${n === 1 ? 'stop' : 'stops'} within 30 minutes, leaving 08:00 on a weekday.`;
-    status.dataset.state = 'reach';
-  }
-  drawStops();
-  showLegend();
+  const mine = ++latest;
+  // The previous field stays on screen while this one is computed.
+  status.textContent = 'Computing...';
+  status.dataset.state = 'computing';
+  setTimeout(() => {
+    if (mine !== latest) return;
+    const sources = sourcesNear(tt, lat, lng, DEFAULT_DEPARTURE);
+    const result = sources.length > 0 ? raptor(tt, idx, sources, MAX_ROUNDS) : null;
+    const values = result
+      ? computeField(grid, {stopLat: tt.stopLat, stopLon: tt.stopLon, arrival: result.arrival, departure: DEFAULT_DEPARTURE})
+      : null;
+    if (!result || !values || reachedCells(values) === 0) {
+      origin = null;
+      stops = stopsGeoJson(tt);
+      field.set(null);
+      status.textContent = 'No stop is within walking range of that point. Click closer to a stop.';
+      status.dataset.state = 'empty';
+    } else {
+      origin = [lng, lat];
+      stops = stopsGeoJson(tt, bandsOf(result.arrival, DEFAULT_DEPARTURE));
+      field.set(values);
+      const n = reachableWithin(result.arrival, DEFAULT_DEPARTURE, 30);
+      status.textContent = `${n} ${n === 1 ? 'stop' : 'stops'} within 30 minutes, leaving 08:00 on a weekday.`;
+      status.dataset.state = 'reach';
+    }
+    field.render(theme);
+    drawStops();
+    showLegend();
+  }, 0);
+});
+
+stopsToggle.addEventListener('change', () => {
+  showStops = stopsToggle.checked;
+  applyStopVisibility();
 });
 
 function setTheme(next: Theme): void {
