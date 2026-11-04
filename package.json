@@ -8,6 +8,7 @@
     "test": "bun test --coverage --coverage-reporter=lcov --coverage-reporter=text",
     "check": "bun run build:client && bun run typecheck && bun run test",
     "build:client": "bun scripts/build-client.ts",
+    "build": "bun scripts/build.ts",
     "screenshots": "bun scripts/screenshots.ts",
     "data:build": "bun src/shell/data-build-cli.ts"
   },

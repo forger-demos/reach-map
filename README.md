@@ -15,6 +15,12 @@ bun run check
 
 `build:client` bundles the map code in `src/ui/` into `public/`; the bundle is not committed. `bun run screenshots` captures the page at the viewports and themes in `.forger/ui.json` into `docs/screenshots/`, with the server running.
 
+## Deploy
+
+`bun run build` bundles the client and writes a self-contained static site to `dist/` (git-ignored): everything in `public/`, including the timetable snapshot, plus the bundle and the map assets. `bun run start` serves `public/`, which holds the same files, so local development and the deployed site match. No server code runs in production.
+
+`vercel.json` points a Vercel project linked to this repository at that build, so every merge to main deploys. Linking the project is done once in Vercel, not in this repository.
+
 ## Data
 
 The timetable snapshot is committed under `public/data/`. To refresh it, download the HSL feed (<https://infopalvelut.storage.hsldev.com/gtfs/hsl.zip>, CC BY 4.0; never commit it) and run:
