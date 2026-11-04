@@ -42,6 +42,6 @@ RAPTOR, single criterion plus rounds, with per-round parents kept for journey re
 
 ## Check of the riskiest assumption
 
-The spike in `spike/` implements the search and tests it against a hand-built timetable whose earliest arrivals were worked out on paper (`spike/raptor.test.ts`; the walk from F to E beating the second line is one of the worked cases). A second test (`spike/feed.test.ts`) loads a gzipped, processed copy of the HSL weekday of 2026-11-04 committed beside it, runs the query, and asserts it finishes in under a second.
+The search lives in `src/core/raptor.ts` and is tested against a hand-built timetable whose earliest arrivals and journeys were worked out on paper (`src/core/raptor.test.ts`; the walk from F to E beating the second line is one of the worked cases). A second test (`src/core/raptor-snapshot.test.ts`) runs a query on the committed weekday file and asserts it finishes in under a second.
 
-Result on the machine used for the spike, 2026-11-03: a one-to-all query from a central Helsinki point, six rounds, on a weekday morning takes a few milliseconds, and decoding the processed day takes roughly a tenth of a second. That is two orders of magnitude inside the budget, which leaves room for the walk-to-cell field, journey reconstruction and slower phones. `bun spike/bench.ts <file>` reprints the figures for five origins across the region.
+Result: a one-to-all query from a central Helsinki point, six rounds, on a weekday morning takes a few milliseconds, and decoding the processed day takes roughly a tenth of a second. That is two orders of magnitude inside the budget, which leaves room for the walk-to-cell field, journey reconstruction and slower phones. The permanent test above is the check that keeps it so.

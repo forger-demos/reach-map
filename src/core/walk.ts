@@ -7,6 +7,8 @@ export const DETOUR_FACTOR = 1.3;
 export const WALK_SPEED_MPS = 1.25;
 /** Longest stop-to-stop transfer, in straight-line metres. */
 export const MAX_TRANSFER_METRES = 400;
+/** Furthest stop a click walks to, in straight-line metres. */
+export const MAX_ORIGIN_METRES = 600;
 
 const EARTH_RADIUS_METRES = 6_371_000;
 

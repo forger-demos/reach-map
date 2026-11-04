@@ -1,5 +1,5 @@
 import {expect, test} from 'bun:test';
-import {parseTheme, resolveTheme, styleFor, stopPaint} from './theme';
+import {bandColours, bandExpression, parseTheme, resolveTheme, styleFor, stopPaint} from './theme';
 
 test.each([
   ['light', 'https://tiles.openfreemap.org/styles/positron'],
@@ -24,4 +24,16 @@ test('parseTheme accepts only known themes', () => {
 
 test('stop dots differ between themes', () => {
   expect(stopPaint('light')).not.toEqual(stopPaint('dark'));
+});
+
+test('the band expression colours banded stops and leaves unbanded ones plain', () => {
+  const e = bandExpression('light', '#123456') as unknown[];
+  expect(e[0]).toBe('case');
+  expect(e[3]).toBe('#123456');
+  expect((e[2] as unknown[]).length).toBe(2 + 2 * 4 + 1);
+});
+
+test('every theme has one colour per band', () => {
+  expect(bandColours('dark').bands.length).toBe(4);
+  expect(bandColours('light').bands.length).toBe(4);
 });

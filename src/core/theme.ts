@@ -21,3 +21,19 @@ export function parseTheme(value: string | null): Theme | null {
 export function stopPaint(theme: Theme): {fill: string; outline: string} {
   return theme === 'dark' ? {fill: '#7cc4ff', outline: '#0c0e14'} : {fill: '#0a62b8', outline: '#ffffff'};
 }
+
+/** One colour per time band, nearest first, then the colour of stops beyond the last band. Sequential and readable on both base maps. */
+export function bandColours(theme: Theme): {bands: string[]; beyond: string} {
+  return theme === 'dark'
+    ? {bands: ['#fde725', '#5ec962', '#21918c', '#6a4fb0'], beyond: '#4a5568'}
+    : {bands: ['#e8a800', '#2e9e4a', '#157a8c', '#4a2f9a'], beyond: '#a0a8b5'};
+}
+
+/** Map paint expression colouring a stop by its `band` property, and by `plain` when it has none. */
+export function bandExpression(theme: Theme, plain: string): unknown[] {
+  const {bands, beyond} = bandColours(theme);
+  const match: unknown[] = ['match', ['get', 'band']];
+  bands.forEach((c, i) => match.push(i, c));
+  match.push(beyond);
+  return ['case', ['has', 'band'], match, plain];
+}

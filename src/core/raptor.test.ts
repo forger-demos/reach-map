@@ -1,6 +1,7 @@
 import {expect, test} from 'bun:test';
-import {fixture, h} from './fixture';
-import {indexStops, raptor} from './raptor';
+import {fixture, h} from './fixtures/raptor';
+import {indexStops, journey, raptor} from './raptor';
+import {routeCount} from './timetable';
 
 const tt = fixture();
 const idx = indexStops(tt);
@@ -54,4 +55,43 @@ test('catches an earlier trip of a route boarded further along', () => {
   // Two sources on the same line: the one further along must not delay the earlier one.
   const r = raptor(tt, idx, [{stop: C, time: h(8, 25)}, {stop: D, time: h(8, 0)}], 5);
   expect(r.arrival[E]).toBe(h(8, 45));
+});
+
+const routeVisiting = (first: number, last: number) => {
+  for (let r = 0; r < routeCount(tt); r++) {
+    const from = tt.routeStopOffset[r] as number;
+    const to = tt.routeStopOffset[r + 1] as number;
+    if (tt.routeStops[from] === first && tt.routeStops[to - 1] === last) return r;
+  }
+  throw new Error('no such route');
+};
+const [R1, R2, R3] = [routeVisiting(A, C), routeVisiting(C, E), routeVisiting(B, F)];
+
+// Same day as the first test, leaving A at 08:00.
+test('journey to C is the single ride on R1', () => {
+  const r = raptor(tt, idx, [{stop: A, time: h(8, 0)}], 5);
+  expect(journey(r, C)).toEqual([{kind: 'ride', route: R1, from: A, to: C, depart: h(8, 0), arrive: h(8, 20)}]);
+});
+
+test('journey to D rides R1 to C and changes to R2', () => {
+  const r = raptor(tt, idx, [{stop: A, time: h(8, 0)}], 5);
+  expect(journey(r, D)).toEqual([
+    {kind: 'ride', route: R1, from: A, to: C, depart: h(8, 0), arrive: h(8, 20)},
+    {kind: 'ride', route: R2, from: C, to: D, depart: h(8, 25), arrive: h(8, 35)},
+  ]);
+});
+
+test('journey to E changes to R3 at B and finishes on foot, beating R2', () => {
+  const r = raptor(tt, idx, [{stop: A, time: h(8, 0)}], 5);
+  expect(journey(r, E)).toEqual([
+    {kind: 'ride', route: R1, from: A, to: B, depart: h(8, 0), arrive: h(8, 10)},
+    {kind: 'ride', route: R3, from: B, to: F, depart: h(8, 15), arrive: h(8, 30)},
+    {kind: 'walk', from: F, to: E, depart: h(8, 30), arrive: h(8, 35)},
+  ]);
+});
+
+test('a source and an unreachable stop have no legs', () => {
+  const r = raptor(tt, idx, [{stop: A, time: h(8, 0)}], 5);
+  expect(journey(r, A)).toEqual([]);
+  expect(journey(r, G)).toEqual([]);
 });

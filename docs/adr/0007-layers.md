@@ -8,7 +8,7 @@ The brief asks for pure, tested maths and data logic apart from rendering. The a
 
 ## Decision
 
-Three layers: `src/core` is pure (routing, timetable layout, walking, field, contours, journeys, story) and imports nothing from the other layers; `src/shell` holds input and output (feed reading, the build command, the server) and may import core; `src/ui` holds browser rendering and may import core. `spike/` is throwaway code outside every layer and is deleted when the router moves into core.
+Three layers: `src/core` is pure (routing, timetable layout, walking, field, contours, journeys, story) and imports nothing from the other layers; `src/shell` holds input and output (feed reading, the build command, the server) and may import core; `src/ui` holds browser rendering and may import core.
 
 ## Consequences
 
