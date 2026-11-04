@@ -42,3 +42,10 @@ export function bandExpression(theme: Theme, plain: string): unknown[] {
 export function contourPaint(theme: Theme): {line: string; halo: string} {
   return theme === 'dark' ? {line: '#ffffff', halo: '#0c0e14'} : {line: '#1b1f2a', halo: '#ffffff'};
 }
+
+/** Colour of each journey mode on the path; walking is neutral so rides stand out. */
+export function modeColours(theme: Theme): Record<'walk' | 'tram' | 'metro' | 'rail' | 'bus' | 'ferry', string> {
+  return theme === 'dark'
+    ? {walk: '#c9d1dc', tram: '#5ec962', metro: '#ff8a3d', rail: '#c792ff', bus: '#7cc4ff', ferry: '#4dd6d6'}
+    : {walk: '#4b5563', tram: '#1f8a3b', metro: '#d9560b', rail: '#7a3fc4', bus: '#0a62b8', ferry: '#0f8a8a'};
+}

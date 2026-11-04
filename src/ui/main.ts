@@ -1,15 +1,19 @@
 import * as maplibregl from 'maplibre-gl';
 import {creditOf} from '../core/credit';
 import {CELL_METRES, computeField, makeGrid, reachedCells, REGION} from '../core/field';
-import {indexStops, raptor, type StopIndex} from '../core/raptor';
+import {describe} from '../core/describe';
+import {hoverJourney} from '../core/hover';
+import {pathGeoJson} from '../core/journey-geojson';
+import {indexStops, raptor, type Result, type StopIndex} from '../core/raptor';
 import {BAND_MINUTES, MAX_ROUNDS, bandsOf, reachableWithin, sourcesNear} from '../core/reach';
 import {clockLabel, resolveServiceDay, type DayType} from '../core/service-day';
 import {validateManifest} from '../core/manifest';
 import {stopsGeoJson, type StopFeatureCollection} from '../core/stops-geojson';
-import {bandColours, bandExpression, parseTheme, resolveTheme, stopPaint, styleFor, type Theme} from '../core/theme';
+import {bandColours, bandExpression, modeColours, parseTheme, resolveTheme, stopPaint, styleFor, type Theme} from '../core/theme';
 import {decode, type Timetable} from '../core/timetable';
 import {ContourLayer} from './contour-layer';
 import {FieldLayer} from './field-layer';
+import {JourneyLayer} from './journey-layer';
 
 const STORAGE_KEY = 'reach-map-theme';
 const HELSINKI_BOUNDS: [[number, number], [number, number]] = [[24.55, 60.07], [25.3, 60.35]];
@@ -56,6 +60,9 @@ let latest = 0;
 const grid = makeGrid(REGION, CELL_METRES);
 const field = new FieldLayer(map, grid);
 const outlines = new ContourLayer(map, grid);
+const journeyLayer = new JourneyLayer(map);
+/** The last search, kept so hovering reads it instead of searching again. */
+let current: {tt: Timetable; result: Result; offset: number; origin: [number, number]} | null = null;
 const stopsToggle = document.getElementById('stops-toggle') as HTMLInputElement;
 const stopsRow = document.getElementById('stops-row') as HTMLElement;
 
@@ -118,6 +125,7 @@ function drawStops(): void {
 map.on('style.load', () => {
   field.render(theme);
   outlines.render(theme);
+  journeyLayer.render(theme);
   drawStops();
 });
 
@@ -239,6 +247,8 @@ async function reach(): Promise<void> {
     ? computeField(grid, {stopLat: tt.stopLat, stopLon: tt.stopLon, arrival: result.arrival, departure: query.offset})
     : null;
   loadedDayType = dayType;
+  current = null;
+  clearHover();
   if (!result || !values || reachedCells(values) === 0) {
     origin = null;
     stops = stopsGeoJson(tt);
@@ -247,6 +257,7 @@ async function reach(): Promise<void> {
     status.textContent = 'No stop is within walking range of that point. Click closer to a stop.';
     status.dataset.state = 'empty';
   } else {
+    current = {tt, result, offset: query.offset, origin: [lng, lat]};
     stops = stopsGeoJson(tt, bandsOf(result.arrival, query.offset));
     field.set(values);
     outlines.set(values);
@@ -259,6 +270,60 @@ async function reach(): Promise<void> {
   drawStops();
   showLegend();
 }
+
+const journeyPanel = document.getElementById('journey') as HTMLElement;
+
+function clearHover(): void {
+  journeyPanel.hidden = true;
+  journeyPanel.replaceChildren();
+  journeyLayer.set(null);
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function showHover(lng: number, lat: number): void {
+  if (!current || !manifest || !loaded) return clearHover();
+  const {tt, result, offset, origin: from} = current;
+  const hover = hoverJourney(tt, result, {lat: from[1], lon: from[0]}, offset, lat, lng);
+  if (!hover) return clearHover();
+  const lines = manifest.lines;
+  const lineOf = (route: number) => lines[tt.routeLine[route] as number] ?? {label: '?', mode: 'bus' as const};
+  const d = describe(hover.input, {stopName: (s) => manifest?.stops[s]?.name ?? 'stop', ride: lineOf});
+  const colours = modeColours(theme);
+  const total = document.createElement('p');
+  total.className = 'total';
+  total.textContent = `${d.totalMinutes} min, ${d.changes === 0 ? 'no changes' : plural(d.changes, 'change')}, ${d.walkMinutes} min walking`;
+  const list = document.createElement('ul');
+  for (const ride of d.rides) {
+    const item = document.createElement('li');
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.style.background = colours[ride.mode];
+    chip.textContent = ride.label;
+    item.append(chip, `${ride.mode}: ${ride.from} to ${ride.to}`);
+    list.append(item);
+  }
+  journeyPanel.replaceChildren(total, list);
+  journeyPanel.hidden = false;
+  journeyLayer.set(
+    pathGeoJson({
+      legs: hover.legs,
+      origin: from,
+      point: [lng, lat],
+      stop: hover.stop,
+      stopLat: tt.stopLat,
+      stopLon: tt.stopLon,
+      modeOf: (route) => lineOf(route).mode,
+    }),
+  );
+}
+
+map.on('mousemove', (e) => showHover(e.lngLat.lng, e.lngLat.lat));
+map.on('mouseout', clearHover);
+// On touch the finger both presses and drags: follow it while it is down.
+map.on('touchstart', (e) => showHover(e.lngLat.lng, e.lngLat.lat));
+map.on('touchmove', (e) => showHover(e.lngLat.lng, e.lngLat.lat));
+map.on('touchend', clearHover);
 
 map.on('click', (e) => {
   if (!loaded) return;
@@ -288,6 +353,7 @@ function setTheme(next: Theme): void {
   theme = next;
   applyChrome();
   showLegend();
+  clearHover();
   map.setStyle(styleFor(theme));
 }
 

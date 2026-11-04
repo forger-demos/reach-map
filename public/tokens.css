@@ -8,6 +8,7 @@
   --chrome-fg: #e8ebf2;
   --chrome-link: #9ed3ff;
   --chrome-border: #2a3042;
+  --chip-fg: #0b0d12;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -20,6 +21,7 @@
     --chrome-fg: #141821;
     --chrome-link: #0a4f96;
     --chrome-border: #c9cfdd;
+  --chip-fg: #ffffff;
   }
 }
 :root[data-theme="dark"] {
@@ -32,6 +34,7 @@
   --chrome-fg: #e8ebf2;
   --chrome-link: #9ed3ff;
   --chrome-border: #2a3042;
+  --chip-fg: #0b0d12;
 }
 :root[data-theme="light"] {
   --bg: #f7f8fb;
@@ -43,4 +46,5 @@
   --chrome-fg: #141821;
   --chrome-link: #0a4f96;
   --chrome-border: #c9cfdd;
+  --chip-fg: #ffffff;
 }

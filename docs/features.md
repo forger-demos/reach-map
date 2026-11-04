@@ -60,3 +60,14 @@ The same origin at 08:00 on a weekday and at 23:00 on a Sunday:
 | Desktop, Sunday 23:00 | ![Desktop, Sunday, light](screenshots/when-sunday-2300-desktop-light.png) | ![Desktop, Sunday, dark](screenshots/when-sunday-2300-desktop-dark.png) |
 | Phone, weekday 08:00 | ![Phone, weekday, light](screenshots/when-weekday-0800-phone-light.png) | ![Phone, weekday, dark](screenshots/when-weekday-0800-phone-dark.png) |
 | Phone, Sunday 23:00 | ![Phone, Sunday, light](screenshots/when-sunday-2300-phone-light.png) | ![Phone, Sunday, dark](screenshots/when-sunday-2300-phone-dark.png) |
+
+## Fastest journey on hover
+
+With an origin set, moving the pointer over the map shows how to get to that point fastest, and draws it. The best stop for the point is the one with the least arrival plus the walk from the stop to the point, within the walking cap and the hour the field covers; the journey is read from the result of the last click, so hovering never searches again. On touch, pressing and dragging does the same while the finger is down.
+
+`describe` in `src/core/describe.ts` turns the legs into a short account: the walking minutes (to the first stop, between stops and from the last stop), each ride with its line label, mode and boarding and alighting stop names, the number of changes and the total time. The panel shows that account; the path is straight segments between the stops of each leg (ADR 0004), coloured by mode with walking in a neutral colour. A point nothing reaches shows no panel and no path, as does a point before there is an origin.
+
+| | Light | Dark |
+|---|---|---|
+| Desktop | ![Desktop, journey, light](screenshots/journey-desktop-light.png) | ![Desktop, journey, dark](screenshots/journey-desktop-dark.png) |
+| Phone | ![Phone, journey, light](screenshots/journey-phone-light.png) | ![Phone, journey, dark](screenshots/journey-phone-dark.png) |

@@ -1,5 +1,5 @@
 import {expect, test} from 'bun:test';
-import {bandColours, bandExpression, contourPaint, parseTheme, resolveTheme, styleFor, stopPaint} from './theme';
+import {bandColours, bandExpression, contourPaint, modeColours, parseTheme, resolveTheme, styleFor, stopPaint} from './theme';
 
 test.each([
   ['light', 'https://tiles.openfreemap.org/styles/positron'],
@@ -41,4 +41,11 @@ test('every theme has one colour per band', () => {
 test('outline colour and halo differ in each theme so labels read on both base maps', () => {
   for (const t of ['light', 'dark'] as const) expect(contourPaint(t).line).not.toBe(contourPaint(t).halo);
   expect(contourPaint('light').line).not.toBe(contourPaint('dark').line);
+});
+
+test('every mode has its own colour in each theme, so rides can be told apart', () => {
+  for (const t of ['light', 'dark'] as const) {
+    const colours = Object.values(modeColours(t));
+    expect(new Set(colours).size).toBe(colours.length);
+  }
 });

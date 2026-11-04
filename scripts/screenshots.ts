@@ -38,6 +38,12 @@ for (const viewport of ui.viewports) {
     await page.waitForSelector('#status[data-state="reach"]', {timeout: 10000}).catch(() => {});
     await page.waitForTimeout(1500);
     await page.screenshot({path: `${outDir}when-weekday-0800-${viewport.name}-${theme}.png`});
+    const off = await page.evaluate(([lng, lat]) => (window as any).__map.project([lng, lat]), [places[0]!.at[0] + 0.03, places[0]!.at[1] + 0.012]);
+    await page.mouse.move(off.x, off.y);
+    await page.waitForSelector('#journey:not([hidden])', {timeout: 5000}).catch(() => {});
+    await page.waitForTimeout(500);
+    await page.screenshot({path: `${outDir}journey-${viewport.name}-${theme}.png`});
+    await page.mouse.move(centre.x, centre.y);
     await page.check('input[name="day"][value="sunday"]');
     await page.fill('#time-slider', String(23 * 60));
     await page.waitForFunction(() => /23:00 on a Sunday/.test(document.getElementById('status')!.textContent ?? ''), null, {timeout: 20000}).catch(() => {});
