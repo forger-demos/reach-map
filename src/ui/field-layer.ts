@@ -1,5 +1,7 @@
 import type * as maplibregl from 'maplibre-gl';
 import type {Grid} from '../core/field';
+import {diffPixels} from '../core/diff-ramp';
+import type {FieldDiff} from '../core/diff';
 import {fieldPixels} from '../core/ramp';
 import type {Theme} from '../core/theme';
 
@@ -8,7 +10,7 @@ const ID = 'field';
 /** Paints a field into an off-screen canvas and shows it on the map as a canvas source under the labels. */
 export class FieldLayer {
   private readonly canvas = document.createElement('canvas');
-  private field: Float32Array | null = null;
+  private pixels: ((theme: Theme) => Uint8ClampedArray) | null = null;
 
   constructor(
     private readonly map: maplibregl.Map,
@@ -20,14 +22,19 @@ export class FieldLayer {
 
   /** Sets the field to show, or clears it with null. */
   set(field: Float32Array | null): void {
-    this.field = field;
+    this.pixels = field ? (theme) => fieldPixels(field, theme) : null;
+  }
+
+  /** Shows the difference of two fields instead, or clears with null. */
+  setDiff(diff: FieldDiff | null): void {
+    this.pixels = diff ? (theme) => diffPixels(diff, theme) : null;
   }
 
   /** Draws the current field for a theme, adding the source and layer when the style lacks them. */
   render(theme: Theme): void {
     const ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
-    if (this.field) {
-      ctx.putImageData(new ImageData(fieldPixels(this.field, theme), this.grid.cols, this.grid.rows), 0, 0);
+    if (this.pixels) {
+      ctx.putImageData(new ImageData(this.pixels(theme), this.grid.cols, this.grid.rows), 0, 0);
     } else {
       ctx.clearRect(0, 0, this.grid.cols, this.grid.rows);
     }

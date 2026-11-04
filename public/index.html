@@ -13,8 +13,23 @@
   <div id="map" role="application" aria-label="Map of the Helsinki region"></div>
   <aside id="controls" class="controls" aria-label="Controls">
     <p id="status" class="status" role="status">Loading the timetable...</p>
+    <fieldset class="mode" id="mode" disabled>
+      <legend>Compare</legend>
+      <div class="days" role="radiogroup" aria-label="Comparison mode">
+        <label><input type="radio" name="mode" value="single" checked> Off</label>
+        <label><input type="radio" name="mode" value="places"> Two points</label>
+        <label><input type="radio" name="mode" value="times"> Two times</label>
+      </div>
+    </fieldset>
+    <fieldset class="when" id="pick" hidden>
+      <legend>A click sets</legend>
+      <div class="days" role="radiogroup" aria-label="Which point a click sets">
+        <label><input type="radio" name="pick" value="first" checked> First point</label>
+        <label><input type="radio" name="pick" value="second"> Second point</label>
+      </div>
+    </fieldset>
     <fieldset class="when" id="when" disabled>
-      <legend>Leave</legend>
+      <legend id="when-legend">Leave</legend>
       <div class="days" role="radiogroup" aria-label="Day type">
         <label><input type="radio" name="day" value="weekday" checked> Weekday</label>
         <label><input type="radio" name="day" value="saturday"> Saturday</label>
@@ -22,6 +37,16 @@
       </div>
       <label class="time" for="time-slider">Time <output id="time-label" for="time-slider">08:00</output></label>
       <input id="time-slider" type="range" min="0" max="1425" step="15" value="480" aria-label="Departure time" aria-valuetext="08:00">
+    </fieldset>
+    <fieldset class="when" id="when2" hidden>
+      <legend>Second time</legend>
+      <div class="days" role="radiogroup" aria-label="Second day type">
+        <label><input type="radio" name="day2" value="weekday" checked> Weekday</label>
+        <label><input type="radio" name="day2" value="saturday"> Saturday</label>
+        <label><input type="radio" name="day2" value="sunday"> Sunday</label>
+      </div>
+      <label class="time" for="time-slider2">Time <output id="time-label2" for="time-slider2">08:00</output></label>
+      <input id="time-slider2" type="range" min="0" max="1425" step="15" value="480" aria-label="Second departure time" aria-valuetext="08:00">
     </fieldset>
     <section id="journey" class="journey" aria-label="Fastest journey to the pointer" aria-live="polite" hidden></section>
     <ul id="legend" class="legend" aria-label="Travel time colours" hidden></ul>

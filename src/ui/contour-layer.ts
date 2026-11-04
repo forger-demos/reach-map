@@ -4,10 +4,20 @@ import type {Grid} from '../core/field';
 import {BAND_MINUTES} from '../core/reach';
 import {contourPaint, type Theme} from '../core/theme';
 
-const SOURCE = 'contours';
-const LINES = 'contour-lines';
-const LABELS = 'contour-labels';
 const EMPTY: ContourFeatureCollection = {type: 'FeatureCollection', features: []};
+
+export interface ContourStyle {
+  /** Prefix of the source and layer ids, so two sets of outlines can share a map. */
+  id: string;
+  /** Dash pattern in line widths; solid when absent. */
+  dash?: number[];
+  /** Whether the lines carry their minutes. */
+  labels: boolean;
+}
+
+export const SOLID: ContourStyle = {id: 'contours', labels: true};
+/** The second set of outlines when two situations are compared: dashed and unlabelled, so the first set's labels stay clear. */
+export const DASHED: ContourStyle = {id: 'contours-second', dash: [3, 2], labels: false};
 
 /** Outlines of the four time bands as GeoJSON lines above the field, each labelled with its minutes. */
 export class ContourLayer {
@@ -16,6 +26,7 @@ export class ContourLayer {
   constructor(
     private readonly map: maplibregl.Map,
     private readonly grid: Grid,
+    private readonly style: ContourStyle = SOLID,
   ) {}
 
   /** Sets the field to outline, or clears the outlines with null. */
@@ -26,12 +37,17 @@ export class ContourLayer {
   /** Draws the outlines for a theme, adding the source and layers when the style lacks them. */
   render(theme: Theme): void {
     const paint = contourPaint(theme);
+    const SOURCE = this.style.id;
+    const LINES = `${SOURCE}-lines`;
+    const LABELS = `${SOURCE}-labels`;
     const source = this.map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined;
     if (source) {
       source.setData(this.data as never);
       this.map.setPaintProperty(LINES, 'line-color', paint.line);
-      this.map.setPaintProperty(LABELS, 'text-color', paint.line);
-      this.map.setPaintProperty(LABELS, 'text-halo-color', paint.halo);
+      if (this.style.labels) {
+        this.map.setPaintProperty(LABELS, 'text-color', paint.line);
+        this.map.setPaintProperty(LABELS, 'text-halo-color', paint.halo);
+      }
       return;
     }
     this.map.addSource(SOURCE, {type: 'geojson', data: this.data as never});
@@ -40,8 +56,9 @@ export class ContourLayer {
       type: 'line',
       source: SOURCE,
       layout: {'line-join': 'round', 'line-cap': 'round'},
-      paint: {'line-color': paint.line, 'line-width': 1.5, 'line-opacity': 0.85},
+      paint: {'line-color': paint.line, 'line-width': 1.5, 'line-opacity': 0.85, ...(this.style.dash ? {'line-dasharray': this.style.dash} : {})},
     });
+    if (!this.style.labels) return;
     this.map.addLayer({
       id: LABELS,
       type: 'symbol',

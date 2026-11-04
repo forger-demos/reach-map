@@ -71,3 +71,21 @@ With an origin set, moving the pointer over the map shows how to get to that poi
 |---|---|---|
 | Desktop | ![Desktop, journey, light](screenshots/journey-desktop-light.png) | ![Desktop, journey, dark](screenshots/journey-desktop-dark.png) |
 | Phone | ![Phone, journey, light](screenshots/journey-phone-light.png) | ![Phone, journey, dark](screenshots/journey-phone-dark.png) |
+
+## Comparison mode
+
+A "Compare" switch in the panel sets one of three modes: off, two points at the same time, or one point at two times. Turning it off, or changing mode, starts the comparison over and returns to the single view.
+
+- Two points: the first click sets the first point; a "A click sets" choice then moves to the second point, and a click sets whichever is selected. Both points leave at the time set in the main controls. Until the second point exists, the first point's field stays on screen with a hint.
+- Two times: with a point chosen, a second day and time selector appears. Until it is touched, a hint asks for it; after that the same point is searched at both times.
+
+`diffFields` in `src/core/diff.ts` compares two fields cell by cell. A cell is reached by both fields, by only the first, by only the second, or by neither; a time difference exists only where both reach the cell, so a cell reached on one side is never given a made-up difference. `readout` turns the counts of cells within 30 minutes into one sentence, and `isFlat` says when nothing differs, which the panel reports as no difference.
+
+`src/core/diff-ramp.ts` colours the difference. It is diverging: blue where the second is quicker, orange where it is slower, a neutral at zero, and a stronger shade for a cell only one side reaches. Blue and orange stay apart for the common colour vision deficiencies, and each side gets steadily darker (light theme) or lighter (dark theme) the further it is from zero. The legend names every colour. The outlines of the first situation stay solid and labelled; those of the second are dashed. The hover journey is off while comparing.
+
+| | Light | Dark |
+|---|---|---|
+| Desktop, two points | ![Desktop, two points, light](screenshots/compare-points-desktop-light.png) | ![Desktop, two points, dark](screenshots/compare-points-desktop-dark.png) |
+| Phone, two points | ![Phone, two points, light](screenshots/compare-points-phone-light.png) | ![Phone, two points, dark](screenshots/compare-points-phone-dark.png) |
+| Desktop, weekday 08:00 against Sunday 23:00 | ![Desktop, two times, light](screenshots/compare-times-desktop-light.png) | ![Desktop, two times, dark](screenshots/compare-times-desktop-dark.png) |
+| Phone, weekday 08:00 against Sunday 23:00 | ![Phone, two times, light](screenshots/compare-times-phone-light.png) | ![Phone, two times, dark](screenshots/compare-times-phone-dark.png) |

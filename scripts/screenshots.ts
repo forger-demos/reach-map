@@ -49,6 +49,28 @@ for (const viewport of ui.viewports) {
     await page.waitForFunction(() => /23:00 on a Sunday/.test(document.getElementById('status')!.textContent ?? ''), null, {timeout: 20000}).catch(() => {});
     await page.waitForTimeout(1500);
     await page.screenshot({path: `${outDir}when-sunday-2300-${viewport.name}-${theme}.png`});
+    await page.reload();
+    await page.waitForFunction(() => (window as any).__map?.loaded(), null, {timeout: 30000}).catch(() => {});
+    await page.waitForSelector('#status[data-state="ready"]', {timeout: 30000}).catch(() => {});
+    await page.check('input[name="mode"][value="places"]');
+    await page.mouse.click(centre.x, centre.y);
+    await page.waitForSelector('#status[data-state="hint"]', {timeout: 10000}).catch(() => {});
+    const other = await page.evaluate(([lng, lat]) => (window as any).__map.project([lng, lat]), places[1]!.at);
+    await page.mouse.click(other.x, other.y);
+    await page.waitForSelector('#status[data-state="compare"]', {timeout: 10000}).catch(() => {});
+    await page.waitForTimeout(1500);
+    await page.screenshot({path: `${outDir}compare-points-${viewport.name}-${theme}.png`});
+    await page.reload();
+    await page.waitForFunction(() => (window as any).__map?.loaded(), null, {timeout: 30000}).catch(() => {});
+    await page.waitForSelector('#status[data-state="ready"]', {timeout: 30000}).catch(() => {});
+    await page.mouse.click(centre.x, centre.y);
+    await page.waitForSelector('#status[data-state="reach"]', {timeout: 10000}).catch(() => {});
+    await page.check('input[name="mode"][value="times"]');
+    await page.check('input[name="day2"][value="sunday"]');
+    await page.fill('#time-slider2', String(23 * 60));
+    await page.waitForSelector('#status[data-state="compare"]', {timeout: 20000}).catch(() => {});
+    await page.waitForTimeout(1500);
+    await page.screenshot({path: `${outDir}compare-times-${viewport.name}-${theme}.png`});
     await context.close();
   }
 }
