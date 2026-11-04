@@ -1,5 +1,5 @@
-// Throwaway spike: round-based earliest-arrival search (RAPTOR) over a Timetable.
-import {type Timetable, routeCount} from './timetable-type';
+// Round-based earliest-arrival search (RAPTOR) over a Timetable, and the journey back to a stop.
+import {type Timetable, routeCount} from './timetable';
 
 export interface Source {
   stop: number;
@@ -12,6 +12,48 @@ export interface Result {
   arrival: Float64Array;
   /** Fewest rounds (vehicle legs) in which the earliest arrival was found. */
   rounds: Int8Array;
+  /** How each stop's earliest arrival was reached: see the PARENT_ constants. */
+  parentKind: Int8Array;
+  /** The stop the last leg started from (the boarding stop of a ride), -1 for a source. */
+  parentStop: Int32Array;
+  /** The route ridden for a ride, -1 otherwise. */
+  parentRoute: Int32Array;
+  /** When the last leg started: the departure at the boarding stop, or the arrival at the walk's start. */
+  parentDepart: Float64Array;
+}
+
+export const PARENT_NONE = 0;
+export const PARENT_SOURCE = 1;
+export const PARENT_WALK = 2;
+export const PARENT_RIDE = 3;
+
+export type Leg =
+  | {kind: 'walk'; from: number; to: number; depart: number; arrive: number}
+  | {kind: 'ride'; route: number; from: number; to: number; depart: number; arrive: number};
+
+/**
+ * The legs that reach a stop at its earliest arrival, from a source stop onwards. Empty for
+ * a source stop itself and for a stop the search never reached. The walk from the clicked
+ * point to a source stop is not a leg; it is the source's start time.
+ */
+export function journey(result: Result, stop: number): Leg[] {
+  const legs: Leg[] = [];
+  let at = stop;
+  // A chain cannot be longer than two legs per round plus the start; the bound only guards corrupt input.
+  for (let guard = 0; guard <= 2 * result.arrival.length; guard++) {
+    const kind = result.parentKind[at] as number;
+    if (kind !== PARENT_WALK && kind !== PARENT_RIDE) break;
+    const from = result.parentStop[at] as number;
+    const depart = result.parentDepart[at] as number;
+    const arrive = result.arrival[at] as number;
+    legs.push(
+      kind === PARENT_RIDE
+        ? {kind: 'ride', route: result.parentRoute[at] as number, from, to: at, depart, arrive}
+        : {kind: 'walk', from, to: at, depart, arrive},
+    );
+    at = from;
+  }
+  return legs.reverse();
 }
 
 export interface StopIndex {
@@ -61,6 +103,10 @@ export function raptor(tt: Timetable, idx: StopIndex, sources: Source[], maxRoun
   const best = new Float64Array(n).fill(Infinity);
   let prev = new Float64Array(n).fill(Infinity);
   const rounds = new Int8Array(n).fill(-1);
+  const parentKind = new Int8Array(n);
+  const parentStop = new Int32Array(n).fill(-1);
+  const parentRoute = new Int32Array(n).fill(-1);
+  const parentDepart = new Float64Array(n);
   let marked = new Set<number>();
 
   const relaxFeet = (from: Set<number>, cur: Float64Array, round: number, into: Set<number>) => {
@@ -73,6 +119,10 @@ export function raptor(tt: Timetable, idx: StopIndex, sources: Source[], maxRoun
           best[to] = at;
           cur[to] = at;
           rounds[to] = round;
+          parentKind[to] = PARENT_WALK;
+          parentStop[to] = s;
+          parentRoute[to] = -1;
+          parentDepart[to] = t;
           into.add(to);
         }
       }
@@ -84,6 +134,9 @@ export function raptor(tt: Timetable, idx: StopIndex, sources: Source[], maxRoun
       best[stop] = time;
       prev[stop] = time;
       rounds[stop] = 0;
+      parentKind[stop] = PARENT_SOURCE;
+      parentStop[stop] = -1;
+      parentRoute[stop] = -1;
       marked.add(stop);
     }
   }
@@ -106,6 +159,8 @@ export function raptor(tt: Timetable, idx: StopIndex, sources: Source[], maxRoun
       const k = (tt.routeStopOffset[r + 1] as number) - stopFrom;
       const timeBase = tt.routeTimeOffset[r] as number;
       let trip = -1;
+      let boardStop = -1;
+      let boardAt = 0;
       for (let i = from; i < k; i++) {
         const s = tt.routeStops[stopFrom + i] as number;
         if (trip >= 0) {
@@ -114,13 +169,21 @@ export function raptor(tt: Timetable, idx: StopIndex, sources: Source[], maxRoun
             best[s] = at;
             cur[s] = at;
             rounds[s] = round;
+            parentKind[s] = PARENT_RIDE;
+            parentStop[s] = boardStop;
+            parentRoute[s] = r;
+            parentDepart[s] = tt.departures[timeBase + trip * k + boardAt] as number;
             next.add(s);
           }
         }
         const ready = prev[s] as number;
         if (ready < Infinity && (trip < 0 || ready <= (tt.departures[timeBase + trip * k + i] as number))) {
           const t = firstTrip(tt, r, k, i, ready);
-          if (t >= 0 && (trip < 0 || t < trip)) trip = t;
+          if (t >= 0 && (trip < 0 || t < trip)) {
+            trip = t;
+            boardStop = s;
+            boardAt = i;
+          }
         }
       }
     }
@@ -128,5 +191,5 @@ export function raptor(tt: Timetable, idx: StopIndex, sources: Source[], maxRoun
     prev = cur;
     marked = next;
   }
-  return {arrival: best, rounds};
+  return {arrival: best, rounds, parentKind, parentStop, parentRoute, parentDepart};
 }

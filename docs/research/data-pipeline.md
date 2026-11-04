@@ -44,6 +44,6 @@ Recommendation: commit a snapshot of the three day-type files and manifest under
 ## Commands
 
 - Build: `bun run data:build <feed.zip|feed-dir> --weekday YYYYMMDD --saturday YYYYMMDD --sunday YYYYMMDD` streams the feed (a zip is read in place with `unzip -p`) and writes one `timetable-<daytype>.bin` per day type plus `manifest.json` under `public/data/`. Each date must fall on its day type and inside the feed's validity window, or the command stops before writing.
-- Measure: `bun spike/bench.ts public/data/timetable-weekday.bin`.
+- Measure: `bun test src/core/raptor-snapshot.test.ts`.
 
 Code layout: pure logic (service-day selection, time parsing, route grouping, walk model, timetable codec, manifest) is in `src/core/`; the streaming reader and the command are in `src/shell/`. The walk constants live in `src/core/walk.ts`. Day files share one stop numbering with the manifest, and each route in a day file points at a manifest line (label and mode).

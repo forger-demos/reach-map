@@ -1,4 +1,4 @@
-import {buildTimetable, type TripInput} from '../src/core/timetable';
+import {buildTimetable, type TripInput} from '../timetable';
 
 export const h = (hh: number, mm: number) => hh * 3600 + mm * 60;
 

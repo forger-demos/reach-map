@@ -1,9 +1,11 @@
 import * as maplibregl from 'maplibre-gl';
 import {creditOf} from '../core/credit';
+import {indexStops, raptor, type StopIndex} from '../core/raptor';
+import {BAND_MINUTES, DEFAULT_DEPARTURE, MAX_ROUNDS, bandsOf, reachableWithin, sourcesNear} from '../core/reach';
 import {validateManifest} from '../core/manifest';
 import {stopsGeoJson, type StopFeatureCollection} from '../core/stops-geojson';
-import {parseTheme, resolveTheme, stopPaint, styleFor, type Theme} from '../core/theme';
-import {decode} from '../core/timetable';
+import {bandColours, bandExpression, parseTheme, resolveTheme, stopPaint, styleFor, type Theme} from '../core/theme';
+import {decode, type Timetable} from '../core/timetable';
 
 const STORAGE_KEY = 'reach-map-theme';
 const HELSINKI_BOUNDS: [[number, number], [number, number]] = [[24.55, 60.07], [25.3, 60.35]];
@@ -32,13 +34,41 @@ map.addControl(new maplibregl.AttributionControl({compact: false, customAttribut
 map.addControl(new maplibregl.NavigationControl({showCompass: false}), 'top-right');
 
 let stops: StopFeatureCollection | null = null;
+let timetable: Timetable | null = null;
+let index: StopIndex | null = null;
+let origin: [number, number] | null = null;
+
+const stopColour = () => (origin ? bandExpression(theme, stopPaint(theme).fill) : stopPaint(theme).fill);
+
+function drawOrigin(): void {
+  const data = {
+    type: 'FeatureCollection',
+    features: origin ? [{type: 'Feature', properties: {}, geometry: {type: 'Point', coordinates: origin}}] : [],
+  };
+  const source = map.getSource('origin') as maplibregl.GeoJSONSource | undefined;
+  if (source) {
+    source.setData(data as never);
+    map.setPaintProperty('origin', 'circle-stroke-color', stopPaint(theme).outline);
+    return;
+  }
+  map.addSource('origin', {type: 'geojson', data: data as never});
+  map.addLayer({
+    id: 'origin',
+    type: 'circle',
+    source: 'origin',
+    paint: {'circle-radius': 8, 'circle-color': '#e5484d', 'circle-stroke-color': stopPaint(theme).outline, 'circle-stroke-width': 2},
+  });
+}
 
 function drawStops(): void {
   if (!stops) return;
   const paint = stopPaint(theme);
-  if (map.getSource('stops')) {
-    map.setPaintProperty('stops', 'circle-color', paint.fill);
+  const source = map.getSource('stops') as maplibregl.GeoJSONSource | undefined;
+  if (source) {
+    source.setData(stops as never);
+    map.setPaintProperty('stops', 'circle-color', stopColour() as never);
     map.setPaintProperty('stops', 'circle-stroke-color', paint.outline);
+    drawOrigin();
     return;
   }
   map.addSource('stops', {type: 'geojson', data: stops as never});
@@ -48,17 +78,19 @@ function drawStops(): void {
     source: 'stops',
     paint: {
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 1.5, 12, 3, 16, 5],
-      'circle-color': paint.fill,
+      'circle-color': stopColour() as never,
       'circle-stroke-color': paint.outline,
       'circle-stroke-width': 0.75,
     },
   });
+  drawOrigin();
 }
 // A new base style drops our source and layer, so draw them again once it has loaded.
 map.on('style.load', drawStops);
 
 const status = document.getElementById('status') as HTMLElement;
 const credit = document.getElementById('credit') as HTMLElement;
+const legend = document.getElementById('legend') as HTMLElement;
 
 function showCredit(manifest: ReturnType<typeof validateManifest>): void {
   const c = creditOf(manifest);
@@ -87,8 +119,10 @@ async function loadTimetable(): Promise<void> {
     const file = await fetch(`data/${manifest.files.weekday}`);
     if (!file.ok) throw new Error(`timetable ${file.status}`);
     const tt = decode(new Uint8Array(await file.arrayBuffer()));
+    timetable = tt;
+    index = indexStops(tt);
     stops = stopsGeoJson(tt);
-    status.textContent = `${tt.stopCount} stops. Weekday timetable.`;
+    status.textContent = 'Click the map to see where public transport takes you from there, leaving 08:00 on a weekday.';
     status.dataset.state = 'ready';
     showCredit(manifest);
     if (map.isStyleLoaded()) drawStops();
@@ -99,10 +133,46 @@ async function loadTimetable(): Promise<void> {
 }
 void loadTimetable();
 
+function showLegend(): void {
+  legend.replaceChildren(
+    ...bandColours(theme).bands.map((colour, i) => {
+      const item = document.createElement('li');
+      const swatch = document.createElement('span');
+      swatch.className = 'swatch';
+      swatch.style.background = colour;
+      item.append(swatch, `Up to ${BAND_MINUTES[i]} min`);
+      return item;
+    }),
+  );
+  legend.hidden = !origin;
+}
+
+map.on('click', (e) => {
+  if (!timetable || !index) return;
+  const {lng, lat} = e.lngLat;
+  const sources = sourcesNear(timetable, lat, lng, DEFAULT_DEPARTURE);
+  origin = [lng, lat];
+  if (sources.length === 0) {
+    stops = stopsGeoJson(timetable);
+    status.textContent = 'No stop is within walking range of that point. Click closer to a stop.';
+    status.dataset.state = 'empty';
+    origin = null;
+  } else {
+    const result = raptor(timetable, index, sources, MAX_ROUNDS);
+    stops = stopsGeoJson(timetable, bandsOf(result.arrival, DEFAULT_DEPARTURE));
+    const n = reachableWithin(result.arrival, DEFAULT_DEPARTURE, 30);
+    status.textContent = `${n} ${n === 1 ? 'stop' : 'stops'} within 30 minutes, leaving 08:00 on a weekday.`;
+    status.dataset.state = 'reach';
+  }
+  drawStops();
+  showLegend();
+});
+
 function setTheme(next: Theme): void {
   if (next === theme) return;
   theme = next;
   applyChrome();
+  showLegend();
   map.setStyle(styleFor(theme));
 }
 
