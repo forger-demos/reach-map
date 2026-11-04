@@ -2,6 +2,8 @@ import {expect, test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {validateManifest} from './core/manifest';
 import {DAY_TYPES, dayTypeOf} from './core/service-day';
+import {indexStops, raptor} from './core/raptor';
+import {MAX_ROUNDS, reachableWithin, sourcesNear} from './core/reach';
 import {decode, routeCount} from './core/timetable';
 
 // The committed snapshot is read from disk; refreshing it is `bun run data:build`.
@@ -33,3 +35,16 @@ for (const d of DAY_TYPES) {
     });
   });
 }
+
+test('the same origin reaches different stops on a weekday morning and a Sunday night', () => {
+  const load = (d: (typeof DAY_TYPES)[number]) => decode(readFileSync(new URL(manifest.files[d], dir)) as unknown as Uint8Array);
+  const reach = (tt: ReturnType<typeof decode>, departure: number) => {
+    const r = raptor(tt, indexStops(tt), sourcesNear(tt, 60.1719, 24.9414, departure), MAX_ROUNDS);
+    return reachableWithin(r.arrival, departure, 45);
+  };
+  const morning = reach(load('weekday'), 8 * 3600);
+  const night = reach(load('sunday'), 23 * 3600);
+  expect(morning).toBeGreaterThan(0);
+  expect(night).toBeGreaterThan(0);
+  expect(night).toBeLessThan(morning);
+});

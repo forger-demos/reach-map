@@ -1,6 +1,6 @@
 import {expect, test} from 'bun:test';
 import {records, tableFromText} from './csv';
-import {activeServices, dayOfWeek, dayTypeOf, isDate} from './service-day';
+import {activeServices, clockLabel, dayOfWeek, dayTypeOf, isDate, resolveServiceDay, type DayType} from './service-day';
 
 const calendar = await records(tableFromText(`service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 WK,1,1,1,1,1,0,0,20261102,20261108
@@ -39,4 +39,36 @@ test('date validation', () => {
   expect(isDate('20261304')).toBe(false);
   expect(isDate('20260231')).toBe(false);
   expect(isDate('2026-11-04')).toBe(false);
+});
+
+const H = 3600;
+const table: [DayType, number, DayType, number][] = [
+  ['weekday', 8 * H, 'weekday', 8 * H],
+  ['saturday', 12 * H, 'saturday', 12 * H],
+  ['sunday', 12 * H, 'sunday', 12 * H],
+  ['weekday', 23.5 * H, 'weekday', 23.5 * H],
+  ['saturday', 23.5 * H, 'saturday', 23.5 * H],
+  ['sunday', 23.5 * H, 'sunday', 23.5 * H],
+  ['sunday', 1 * H, 'saturday', 25 * H],
+  ['saturday', 1 * H, 'weekday', 25 * H],
+  ['weekday', 1 * H, 'weekday', 25 * H],
+  ['sunday', 0, 'saturday', 24 * H],
+  ['sunday', 4 * H - 1, 'saturday', 28 * H - 1],
+  ['sunday', 4 * H, 'sunday', 4 * H],
+];
+
+test.each(table)('%s at %d s reads the %s file at %d s', (dayType, clock, file, offset) => {
+  expect(resolveServiceDay(dayType, clock)).toEqual({dayType: file, offset});
+});
+
+test('a clock outside the day is refused', () => {
+  expect(() => resolveServiceDay('weekday', -1)).toThrow();
+  expect(() => resolveServiceDay('weekday', 86400)).toThrow();
+  expect(() => resolveServiceDay('weekday', NaN)).toThrow();
+});
+
+test('clock labels', () => {
+  expect(clockLabel(8 * H)).toBe('08:00');
+  expect(clockLabel(23.5 * H)).toBe('23:30');
+  expect(clockLabel(0)).toBe('00:00');
 });

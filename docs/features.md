@@ -19,7 +19,7 @@ The data comes from the committed snapshot under `public/data/`, refreshed by `b
 
 ## Click to reach
 
-Before the first click the side panel says to click the map. A click sets the origin: the search leaves 08:00 on the weekday, the traveller walks to any stop within walking range, and the search runs in the browser on the loaded timetable. The origin is marked, and a one-line readout says how many stops are reachable within 30 minutes. If no stop is within walking range, a message says so and the field is cleared. The walking range and speed are the model constants in `src/core/walk.ts`.
+Before the first click the side panel says to click the map. A click sets the origin: the search leaves at the chosen time, 08:00 on a weekday at first, the traveller walks to any stop within walking range, and the search runs in the browser on the loaded timetable. The origin is marked, and a one-line readout says how many stops are reachable within 30 minutes. If no stop is within walking range, a message says so and the field is cleared. The walking range and speed are the model constants in `src/core/walk.ts`.
 
 The search also keeps, for every stop, how it was reached; `journey` in `src/core/raptor.ts` turns that into the walk and ride legs with times.
 
@@ -43,3 +43,20 @@ Near the city centre and in a suburb, with the outlines:
 ## Outlines
 
 Over the field, a line marks where the travel time crosses 15, 30, 45 and 60 minutes, each labelled with its minutes along the line. `src/core/contour.ts` runs marching squares over the field grid: a vertex lies on the line between two neighbouring cell centres where the value crosses the threshold, interpolated linearly. A cell at or below the threshold is inside, an unreached cell is outside, and where a reached cell meets an unreached one the vertex sits halfway. A saddle is resolved by the mean of the four corners, so the same grid always gives the same lines. Lines that run into the edge of the grid stay open; a threshold that nothing crosses draws nothing. The lines are a GeoJSON layer drawn in a colour and halo chosen per theme.
+
+## Departure time and day type
+
+The panel has a day selector (weekday, Saturday, Sunday) and a time slider across the whole day in quarter-hour steps. Both are native form controls, so they work by touch and keyboard and carry labels; the slider announces the chosen time. They are enabled once the timetable has loaded. Changing either re-runs the search from the current origin and repaints the field and outlines.
+
+`resolveServiceDay` in `src/core/service-day.ts` maps the chosen day type and clock time to the day file and the offset to search. The small hours of a morning belong to the night service of the day before: they read the previous day type with 24 hours added (a Sunday at 01:00 reads the Saturday file at 25:00). A weekday follows a weekday, since the files hold one typical weekday.
+
+Only the selected day file is fetched until another is needed; each is fetched once and kept. While a file loads the previous result stays and the status line says so; if it fails, the status line says so, the selector goes back to the day shown and the old result stays.
+
+The same origin at 08:00 on a weekday and at 23:00 on a Sunday:
+
+| | Light | Dark |
+|---|---|---|
+| Desktop, weekday 08:00 | ![Desktop, weekday, light](screenshots/when-weekday-0800-desktop-light.png) | ![Desktop, weekday, dark](screenshots/when-weekday-0800-desktop-dark.png) |
+| Desktop, Sunday 23:00 | ![Desktop, Sunday, light](screenshots/when-sunday-2300-desktop-light.png) | ![Desktop, Sunday, dark](screenshots/when-sunday-2300-desktop-dark.png) |
+| Phone, weekday 08:00 | ![Phone, weekday, light](screenshots/when-weekday-0800-phone-light.png) | ![Phone, weekday, dark](screenshots/when-weekday-0800-phone-dark.png) |
+| Phone, Sunday 23:00 | ![Phone, Sunday, light](screenshots/when-sunday-2300-phone-light.png) | ![Phone, Sunday, dark](screenshots/when-sunday-2300-phone-dark.png) |
