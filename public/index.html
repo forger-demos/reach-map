@@ -13,6 +13,16 @@
   <div id="map" role="application" aria-label="Map of the Helsinki region"></div>
   <aside id="controls" class="controls" aria-label="Controls">
     <p id="status" class="status" role="status">Loading the timetable...</p>
+    <fieldset class="when" id="when" disabled>
+      <legend>Leave</legend>
+      <div class="days" role="radiogroup" aria-label="Day type">
+        <label><input type="radio" name="day" value="weekday" checked> Weekday</label>
+        <label><input type="radio" name="day" value="saturday"> Saturday</label>
+        <label><input type="radio" name="day" value="sunday"> Sunday</label>
+      </div>
+      <label class="time" for="time-slider">Time <output id="time-label" for="time-slider">08:00</output></label>
+      <input id="time-slider" type="range" min="0" max="1425" step="15" value="480" aria-label="Departure time" aria-valuetext="08:00">
+    </fieldset>
     <ul id="legend" class="legend" aria-label="Travel time colours" hidden></ul>
     <label id="stops-row" class="stops-row" hidden><input id="stops-toggle" type="checkbox"> Show stops</label>
     <footer id="credit" class="credit"></footer>

@@ -41,3 +41,33 @@ export function activeServices(calendar: Row[], calendarDates: Row[], date: stri
   }
   return active;
 }
+
+const DAY_SECONDS = 86400;
+
+/** Clock times before this read the previous service day, whose trips run on past midnight (ADR 0002). */
+export const SERVICE_DAY_START = 4 * 3600;
+
+/** The day type that ran the day before. A weekday follows a weekday: the files hold one typical weekday, not Monday. */
+const PREVIOUS: Record<DayType, DayType> = {weekday: 'weekday', saturday: 'weekday', sunday: 'saturday'};
+
+export interface ServiceQuery {
+  /** The day file to search. */
+  dayType: DayType;
+  /** Seconds from the start of that file's service day; past 86400 in the small hours. */
+  offset: number;
+}
+
+/**
+ * Which day file and offset answer "leave at `clock` on a `dayType`", where `clock` is seconds
+ * since midnight of the chosen day. The small hours belong to the night service of the day before.
+ */
+export function resolveServiceDay(dayType: DayType, clock: number): ServiceQuery {
+  if (!Number.isFinite(clock) || clock < 0 || clock >= DAY_SECONDS) throw new Error(`clock out of range: ${clock}`);
+  return clock < SERVICE_DAY_START ? {dayType: PREVIOUS[dayType], offset: clock + DAY_SECONDS} : {dayType, offset: clock};
+}
+
+/** `HH:MM` of a clock time in seconds, for labels. */
+export function clockLabel(clock: number): string {
+  const minutes = Math.floor(clock / 60);
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}

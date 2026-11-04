@@ -30,6 +30,19 @@ for (const viewport of ui.viewports) {
       await page.waitForTimeout(1500);
       await page.screenshot({path: `${outDir}reach-${place.name}-${viewport.name}-${theme}.png`});
     }
+    await page.reload();
+    await page.waitForFunction(() => (window as any).__map?.loaded(), null, {timeout: 30000}).catch(() => {});
+    await page.waitForSelector('#status[data-state="ready"]', {timeout: 30000}).catch(() => {});
+    const centre = await page.evaluate(([lng, lat]) => (window as any).__map.project([lng, lat]), places[0]!.at);
+    await page.mouse.click(centre.x, centre.y);
+    await page.waitForSelector('#status[data-state="reach"]', {timeout: 10000}).catch(() => {});
+    await page.waitForTimeout(1500);
+    await page.screenshot({path: `${outDir}when-weekday-0800-${viewport.name}-${theme}.png`});
+    await page.check('input[name="day"][value="sunday"]');
+    await page.fill('#time-slider', String(23 * 60));
+    await page.waitForFunction(() => /23:00 on a Sunday/.test(document.getElementById('status')!.textContent ?? ''), null, {timeout: 20000}).catch(() => {});
+    await page.waitForTimeout(1500);
+    await page.screenshot({path: `${outDir}when-sunday-2300-${viewport.name}-${theme}.png`});
     await context.close();
   }
 }

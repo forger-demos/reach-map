@@ -2,7 +2,8 @@ import * as maplibregl from 'maplibre-gl';
 import {creditOf} from '../core/credit';
 import {CELL_METRES, computeField, makeGrid, reachedCells, REGION} from '../core/field';
 import {indexStops, raptor, type StopIndex} from '../core/raptor';
-import {BAND_MINUTES, DEFAULT_DEPARTURE, MAX_ROUNDS, bandsOf, reachableWithin, sourcesNear} from '../core/reach';
+import {BAND_MINUTES, MAX_ROUNDS, bandsOf, reachableWithin, sourcesNear} from '../core/reach';
+import {clockLabel, resolveServiceDay, type DayType} from '../core/service-day';
 import {validateManifest} from '../core/manifest';
 import {stopsGeoJson, type StopFeatureCollection} from '../core/stops-geojson';
 import {bandColours, bandExpression, parseTheme, resolveTheme, stopPaint, styleFor, type Theme} from '../core/theme';
@@ -36,9 +37,18 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.AttributionControl({compact: false, customAttribution: '<a href="https://maplibre.org/">MapLibre</a>'}), 'bottom-right');
 map.addControl(new maplibregl.NavigationControl({showCompass: false}), 'top-right');
 
+interface Loaded {
+  timetable: Timetable;
+  index: StopIndex;
+}
+
 let stops: StopFeatureCollection | null = null;
-let timetable: Timetable | null = null;
-let index: StopIndex | null = null;
+let manifest: ReturnType<typeof validateManifest> | null = null;
+const days = new Map<DayType, Promise<Loaded>>();
+let dayType: DayType = 'weekday';
+let clock = 8 * 3600;
+let loaded: Loaded | null = null;
+let loadedDayType: DayType = 'weekday';
 let origin: [number, number] | null = null;
 let showStops = false;
 let latest = 0;
@@ -134,20 +144,45 @@ function showCredit(manifest: ReturnType<typeof validateManifest>): void {
   );
 }
 
+/** One fetch per day file; a failed fetch is forgotten so choosing it again retries. */
+function loadDay(day: DayType): Promise<Loaded> {
+  let pending = days.get(day);
+  if (!pending) {
+    pending = (async () => {
+      const res = await fetch(`data/${(manifest as NonNullable<typeof manifest>).files[day]}`);
+      if (!res.ok) throw new Error(`timetable ${res.status}`);
+      const timetable = decode(new Uint8Array(await res.arrayBuffer()));
+      return {timetable, index: indexStops(timetable)};
+    })();
+    pending.catch(() => days.delete(day));
+    days.set(day, pending);
+  }
+  return pending;
+}
+
+const when = document.getElementById('when') as HTMLFieldSetElement;
+const slider = document.getElementById('time-slider') as HTMLInputElement;
+const timeLabel = document.getElementById('time-label') as HTMLOutputElement;
+const dayRadios = [...document.querySelectorAll<HTMLInputElement>('input[name="day"]')];
+const DAY_NAMES: Record<DayType, string> = {weekday: 'a weekday', saturday: 'a Saturday', sunday: 'a Sunday'};
+
+function showClock(): void {
+  const text = clockLabel(clock);
+  timeLabel.textContent = text;
+  slider.setAttribute('aria-valuetext', text);
+}
+
 async function loadTimetable(): Promise<void> {
   try {
     const res = await fetch('data/manifest.json');
     if (!res.ok) throw new Error(`manifest ${res.status}`);
-    const manifest = validateManifest(await res.json());
-    const file = await fetch(`data/${manifest.files.weekday}`);
-    if (!file.ok) throw new Error(`timetable ${file.status}`);
-    const tt = decode(new Uint8Array(await file.arrayBuffer()));
-    timetable = tt;
-    index = indexStops(tt);
-    stops = stopsGeoJson(tt);
+    manifest = validateManifest(await res.json());
+    loaded = await loadDay(dayType);
+    stops = stopsGeoJson(loaded.timetable);
     status.textContent = 'Click the map to see where public transport takes you from there, leaving 08:00 on a weekday.';
     status.dataset.state = 'ready';
     showCredit(manifest);
+    when.disabled = false;
     if (map.isStyleLoaded()) drawStops();
   } catch {
     status.textContent = 'The timetable could not be loaded. The map still works.';
@@ -170,43 +205,77 @@ function showLegend(): void {
   legend.hidden = !origin;
 }
 
-map.on('click', (e) => {
-  if (!timetable || !index) return;
-  const tt = timetable;
-  const idx = index;
-  const {lng, lat} = e.lngLat;
+/** Runs the search from the origin for the chosen day and time; the previous result stays until it is done. */
+async function reach(): Promise<void> {
+  if (!origin || !manifest) return;
   const mine = ++latest;
-  // The previous field stays on screen while this one is computed.
+  const [lng, lat] = origin;
+  const query = resolveServiceDay(dayType, clock);
+  const wanted = DAY_NAMES[dayType];
+  let day: Loaded;
+  if (!days.has(query.dayType)) {
+    status.textContent = `Loading ${query.dayType} timetable...`;
+    status.dataset.state = 'computing';
+  }
+  try {
+    day = await loadDay(query.dayType);
+  } catch {
+    if (mine !== latest) return;
+    dayType = loadedDayType;
+    for (const r of dayRadios) r.checked = r.value === dayType;
+    status.textContent = `The ${query.dayType} timetable could not be loaded. The previous result is still shown.`;
+    status.dataset.state = 'failed';
+    return;
+  }
+  if (mine !== latest) return;
   status.textContent = 'Computing...';
   status.dataset.state = 'computing';
-  setTimeout(() => {
-    if (mine !== latest) return;
-    const sources = sourcesNear(tt, lat, lng, DEFAULT_DEPARTURE);
-    const result = sources.length > 0 ? raptor(tt, idx, sources, MAX_ROUNDS) : null;
-    const values = result
-      ? computeField(grid, {stopLat: tt.stopLat, stopLon: tt.stopLon, arrival: result.arrival, departure: DEFAULT_DEPARTURE})
-      : null;
-    if (!result || !values || reachedCells(values) === 0) {
-      origin = null;
-      stops = stopsGeoJson(tt);
-      field.set(null);
-      outlines.set(null);
-      status.textContent = 'No stop is within walking range of that point. Click closer to a stop.';
-      status.dataset.state = 'empty';
-    } else {
-      origin = [lng, lat];
-      stops = stopsGeoJson(tt, bandsOf(result.arrival, DEFAULT_DEPARTURE));
-      field.set(values);
-      outlines.set(values);
-      const n = reachableWithin(result.arrival, DEFAULT_DEPARTURE, 30);
-      status.textContent = `${n} ${n === 1 ? 'stop' : 'stops'} within 30 minutes, leaving 08:00 on a weekday.`;
-      status.dataset.state = 'reach';
-    }
-    field.render(theme);
-    outlines.render(theme);
-    drawStops();
-    showLegend();
-  }, 0);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  if (mine !== latest) return;
+  const tt = day.timetable;
+  const sources = sourcesNear(tt, lat, lng, query.offset);
+  const result = sources.length > 0 ? raptor(tt, day.index, sources, MAX_ROUNDS) : null;
+  const values = result
+    ? computeField(grid, {stopLat: tt.stopLat, stopLon: tt.stopLon, arrival: result.arrival, departure: query.offset})
+    : null;
+  loadedDayType = dayType;
+  if (!result || !values || reachedCells(values) === 0) {
+    origin = null;
+    stops = stopsGeoJson(tt);
+    field.set(null);
+    outlines.set(null);
+    status.textContent = 'No stop is within walking range of that point. Click closer to a stop.';
+    status.dataset.state = 'empty';
+  } else {
+    stops = stopsGeoJson(tt, bandsOf(result.arrival, query.offset));
+    field.set(values);
+    outlines.set(values);
+    const n = reachableWithin(result.arrival, query.offset, 30);
+    status.textContent = `${n} ${n === 1 ? 'stop' : 'stops'} within 30 minutes, leaving ${clockLabel(clock)} on ${wanted}.`;
+    status.dataset.state = 'reach';
+  }
+  field.render(theme);
+  outlines.render(theme);
+  drawStops();
+  showLegend();
+}
+
+map.on('click', (e) => {
+  if (!loaded) return;
+  origin = [e.lngLat.lng, e.lngLat.lat];
+  void reach();
+});
+
+for (const radio of dayRadios) {
+  radio.addEventListener('change', () => {
+    dayType = radio.value as DayType;
+    void reach();
+  });
+}
+slider.addEventListener('input', () => {
+  clock = Number(slider.value) * 60;
+  showClock();
+  void reach();
 });
 
 stopsToggle.addEventListener('change', () => {
