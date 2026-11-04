@@ -55,3 +55,6 @@ export function footpaths(lat: ArrayLike<number>, lon: ArrayLike<number>): Array
   }
   return out;
 }
+
+/** Furthest a stop paints the colour field, in straight-line metres. */
+export const MAX_FIELD_WALK_METRES = 600;

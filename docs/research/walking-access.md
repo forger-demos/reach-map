@@ -30,3 +30,7 @@ Helsinki is on a coast with bays. A straight line crosses water that no pedestri
 ## Recommendation
 
 Straight line with a detour factor and a fixed walking speed, kept behind one small interface so the model can change without touching the router. The factor and speed start as assumptions to be calibrated by the validation slice ([validation](validation.md)), not as measured truths. A street-network transfer list stays the upgrade path if validation shows transfers are mis-timed. See [ADR 0003](../adr/0003-walking-access.md).
+
+## How the field uses the walk model
+
+The colour field ([features](../features.md)) is the dense walk from the diagram above. Each reached stop writes `arrival + walkSeconds(distance)` into the cells whose centres lie within the field walk cap (`MAX_FIELD_WALK_METRES` in `src/core/walk.ts`), and each cell keeps the minimum. The time a stop has left bounds the disc it paints, so a stop reached late paints a smaller area. The same detour factor and speed as for transfers apply, so one change to the model moves the whole field. The water problem remains: a cell across a bay from a stop is painted if it is inside the cap, and the cap is what limits the spill until a land mask exists.
