@@ -29,6 +29,12 @@ body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-s
 .legend[hidden] { display: none; }
 .legend li { display: flex; align-items: center; gap: 6px; }
 .swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--chrome-border); }
+.journey { font-size: 13px; line-height: 1.4; border-left: 4px solid var(--accent); padding: 2px 0 2px 8px; }
+.journey[hidden] { display: none; }
+.journey .total { margin: 0; font-weight: 600; }
+.journey ul { list-style: none; margin: 0; padding: 0; }
+.journey li { display: flex; gap: 6px; align-items: baseline; }
+.journey .chip { display: inline-block; min-width: 2em; padding: 0 6px; border-radius: 4px; text-align: center; font-weight: 700; color: var(--chip-fg); }
 .stops-row { font-size: 13px; display: flex; align-items: center; gap: 8px; min-height: 24px; }
 .stops-row[hidden] { display: none; }
 .status[data-state="computing"] { color: var(--muted); }
