@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun /home/diego/work/forger/plugins/forger/bin/work.ts hook"
+            "command": "bun \"$HOME\"/work/forger/plugins/forger/bin/work.ts hook"
           }
         ]
       }
