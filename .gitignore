@@ -13,3 +13,4 @@ public/maplibre-gl.css
 public/maplibre-gl-worker.mjs
 public/maplibre-gl-shared.mjs
 dist/
+.forger/tmp/
